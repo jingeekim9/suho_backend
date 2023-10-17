@@ -4,8 +4,9 @@ const config = require('../config/config')
 const { MONGO_URI } = config;
 
 module.exports = () => {
-  function connect() {
-    mongoose.connect("mongodb://localhost:27017/Test1?retryWrites=true", {
+  function connect() { 
+//    mongoose.connect("mongodb://localhost:27017/Test1?retryWrites=true", {
+      mongoose.connect(MONGO_URI, {
         useNewUrlParser: true,
         useUnifiedTopology: true
       })
