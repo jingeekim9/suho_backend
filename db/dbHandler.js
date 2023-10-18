@@ -6,7 +6,6 @@ const fs = require("fs");
 const fileConvert = require("./data/utils/fileConvert")
 const CSV = require("./data/utils/handleCSV")
 const db = require('./db.js'); // db 불러오기
-const { disconnect } = require("process");
 
 const DataFolder = "./data/";
 
@@ -16,9 +15,7 @@ const Collections = { questions: question, answers: answer, };
 function filterByChapter(docs, array){
   let returnArray = [];
    array.forEach((cpt) => {
-    console.log('cpt', cpt)
       docs.forEach((element) => {
-        console.log('element',element)
           if(element.chapter.includes(cpt)){returnArray.push(element);}
       });
   });
@@ -46,8 +43,7 @@ module.exports.getQuestionInfo = async () => {
 }
 
 module.exports.getQuestions = async (infos) => {
-  console.log("getQuestion is called in the backend!")
-  console.log('getQuestions:',infos)
+  console.log('getQuestions, infos:',infos)
   // infos = { questionType: String, difficulty: Array, chapter, paper: Array, timezone: Array, }
   const returned = await Collections.questions.find({
       'difficulty': { $in: infos.difficulty },
@@ -60,68 +56,22 @@ module.exports.getQuestions = async (infos) => {
     return result
   });
 
-  console.log('getQuestion',returned)
-  let result = getMultipleRandom(returned, infos.questionNumber)
-  console.log(result)
+  let result = isNaN(infos.questionNumber) ? 
+                returned : 
+                getMultipleRandom(returned, infos.questionNumber)
+  console.log('getQuestions, ',result)
   return result
 };
 
-
-module.exports.getMultipleAnswers = async (infos) => {
-  /*
-    infos: {answerId, specificAnswerId}
-  */
-
-  const returnList = [];
-  for(let i = 0; i < infos.length; i++){
-    let result = "";
-    infos[i].specificAnswerId == undefined? 
-      result = await Collections.answers.findOne({
-        'answerID' : { $in: infos[i].answerId },
-      }) :
-
-      result = await Collections.answers.findOne({
-        'answerID' : { $in: infos[i].answerId },
-        'answer.specificAnswerID': { $in: infos[i].specificAnswerId },
-      })
-
-      returnList.push(result);
-  }
-  //?
-  console.log("getMultipleAnswers found", returnList);
-  return returnList;
-};
-
 module.exports.getAnswers = async (infos) => {
+  const result = await Collections.answers.find({
+      'answerID' : { $in: infos.answerID },
+      'answer.specificAnswerID': { $in: infos.specificAnswerID },
+  })
 
-  // Divide the case with and without specificAnswerId
-  let result = [];
-  if(infos.specificAnswerId == undefined){
-    result = await Collections.answers.find({
-      'answerID' : { $in: infos.answerId },
-    })
-  }
-  else{
-    result = await Collections.answers.find({
-      'answerID' : { $in: infos.answerId },
-      'answer.specificAnswerID': { $in: infos.specificAnswerId },
-    })
-  }
-
-  console.log("A INFO:", infos)
-  console.log("This is what getAnswers in background found: ", result);
+  console.log(result);
   
   return result;
-};
-
-module.exports.saveQuestion = async (infos) => {
-  console.log("save question called in background");
-  var myquery = { 
-    "questionId": infos.questionId,
-  };
-  var newvalues = { $set: {bookmarked: infos.bookmarked, wrong: infos.wrong} };
-
-  Collections.questions.updateOne(myquery, newvalues).then(() => {console.log("SAVE QUESTION WORKING")});
 };
 
 module.exports.uploadFilesQuestion = () => {
@@ -132,8 +82,9 @@ module.exports.uploadFilesQuestion = () => {
       if (err) console.log(err);
       else return files
     })
-    csv_data.forEach(async (data) => {
-      let qfFound = questionFileList.find((element) => {return element.name === data.questionImage});
+
+    csv_data.forEach( async (data) => {
+      let qfFound = questionFileList.find(element => element.name === data.questionImage);
       if (qfFound === undefined) {
         console.error('q) image name :', data.questionImage, 'is not available.')  
         return;
@@ -148,29 +99,59 @@ module.exports.uploadFilesQuestion = () => {
           console.error('sq) image name :', data.subQuestionImage, 'is not available.')  
           return;
         }
-      } else{
+      } else {
         subQuestionImageFile = fileConvert.base64_encode(questionFilePath + sqfFound.name)
       }
       
       let answerSubscripts_ = data.answerSubscripts.split(",")
       let chapter_ = data.chapter.split(",").map((e) => +e)
 
-      console.log(Array.isArray(answerSubscripts_), Array.isArray(chapter_))
+      let count_ = await Collections.questions.countDocuments({ 
+        'questionId': data.questionID, 
+        'question.subQuestion': { $elemMatch: { specificQuestionId: data.specificQuestionID }}
+      })
 
-      await Collections.questions.countDocuments({ 
-        questionId: data.questionID, 
-        specificQuestionId: data.specificQuestionID
-      }).then( async (count) => {
-        if (count > 0) { // exact document exist > update
-          console.log(data.chapter.split(","));
-          await Collections.questions.findOneAndUpdate({ 
-            questionId: data.questionID, 
-            specificQuestionID: data.specificQuestionID
-          }, {
+      if (count_ === 1) { // exact document exist > update
+        await Collections.questions.findOneAndUpdate({ 
+          'questionId': data.questionID, 
+          'question.subQuestion': { $elemMatch: { specificQuestionId: data.specificQuestionID }}
+        }, {
+          questionId: data.questionID, 
+          question: {
+            questionType: data.questionType,
+            questionImage: {image: questionImageFile,},
+            subQuestion: [{
+              subQuestionImage: {image: subQuestionImageFile},
+              specificQuestionId: data.specificQuestionID,
+              numAns: data.numAns,
+              unit: data.unit,
+              marks: data.marks,
+              instruction: data.instruction,
+              answerSubscripts: answerSubscripts_
+            }],
+          },
+          chapter: chapter_,
+          difficulty: data.difficulty, // easy, medium, hard
+          paper: data.paper,
+          timezone: data.timezone,
+          season: data.season ,// W or S,
+          year: data.year,
+          wrong: 0,
+          bookmarked: "false",
+        }, { 
+          new: true, 
+          overwrite: true
+        })
+      } else { // no document or many exist > delete and create new doc
+        await Collections.questions.deleteMany({ 
+          'questionId': data.questionID, 
+          'question.subQuestion': { $elemMatch: { specificQuestionId: data.specificQuestionID }}
+        }).then ( async () => {
+          const newDoc = new Collections.questions({
             questionId: data.questionID, 
             question: {
               questionType: data.questionType,
-              questionImage: {image: questionImageFile,},
+            questionImage: {image: questionImageFile,},
               subQuestion: [{
                 subQuestionImage: {image: subQuestionImageFile},
                 specificQuestionId: data.specificQuestionID,
@@ -178,7 +159,7 @@ module.exports.uploadFilesQuestion = () => {
                 unit: data.unit,
                 marks: data.marks,
                 instruction: data.instruction,
-                answerSubscripts: answerSubscripts_
+                answerSubscripts: answerSubscripts_,
               }],
             },
             chapter: chapter_,
@@ -187,48 +168,13 @@ module.exports.uploadFilesQuestion = () => {
             timezone: data.timezone,
             season: data.season ,// W or S,
             year: data.year,
-            wrong: "false",
+            wrong: 0,
             bookmarked: "false",
-            wrongCount: 0,
-          }, { 
-            new: true, 
-            overwrite: true
-          }).then(()=>console.log("updated"));
-        } else { // no document or many exist > delete and create new doc
-          console.log(count)
-          await Collections.questions.deleteMany({ 
-            questionId: data.questionID, 
-            specificQuestionId: data.specificQuestionID
-          }).then ( async () => {
-            const newDoc = new Collections.questions({
-              questionId: data.questionID, 
-              question: {
-                questionType: data.questionType,
-                questionImage: {image: questionImageFile,},
-                subQuestion: [{
-                  subQuestionImage: {image: subQuestionImageFile},
-                  specificQuestionId: data.specificQuestionID,
-                  numAns: data.numAns,
-                  unit: data.unit,
-                  marks: data.marks,
-                  instruction: data.instruction,
-                  answerSubscripts: answerSubscripts_,
-                }],
-              },
-              chapter: chapter_,
-              difficulty: data.difficulty, // easy, medium, hard
-              paper: data.paper,
-              timezone: data.timezone,
-              season: data.season ,// W or S,
-              year: data.year,
-              wrong: 0,
-              bookmarked: "false",
-            })
-            await newDoc.save().then(() => console.log("delete and saved"))
           })
-        }
-      })    
-    })      
+          await newDoc.save().then(()=>console.log("Question : delete and saved"))
+        })
+      }
+    })    
   })
 };
 
@@ -242,8 +188,8 @@ module.exports.uploadFilesAnswer = () => {
       if (err) console.log(err);
       else return files
     })
-    csv_data.forEach(async (data) => {
-      let ansFound = answerFileList.find((element) => {return element.name === data.answerImage});
+    csv_data.forEach( async (data) => {
+      let ansFound = answerFileList.find((element) => { return element.name === data.answerImage });
       if (ansFound === undefined) {
         console.error('ans) answer name :', data.answerImage, 'is not available.')  
         return;
@@ -254,46 +200,46 @@ module.exports.uploadFilesAnswer = () => {
       let answerValues = data.answerValues.split(",");
       console.log(answerValues, " and ", data.answerValues);
 
-      await Collections.answers.countDocuments({ 
-        answerID: data.answerID, 
-        specificAnswerId: data.specificAnswerID
-      }).then( async (count) => {
-        if (count > 0) { // exact document exist > update
-          await Collections.answers.findOneAndUpdate({ 
-            answerID: data.answerID, 
-            specificAnswerId: data.specificAnswerID    
-          }, {
+      let count_ = await Collections.answers.countDocuments({ 
+        'answerID': data.answerID, 
+        'answer.specificAnswerID': data.specificAnswerID 
+      })
+
+      if (count_ === 1) { // exact document exist > update
+        await Collections.answers.findOneAndUpdate({ 
+          'answerID': data.answerID, 
+          'answer.specificAnswerID': data.specificAnswerID 
+        }, {
+          answerID: data.answerID, 
+          answer: {
+            answerType: data.answerType,
+            answerImage: {image: answerImageFile},
+            answerSubscripts: answerSubscripts_,
+            specificAnswerID: data.specificAnswerID,    
+            answerValues: answerValues,
+          },
+        }, { 
+          new: true, 
+          overwrite: true
+        })
+      } else { // no document or many exist > delete and create new doc
+        await Collections.answers.deleteMany({ 
+          'answerID': data.answerID, 
+          'answer.specificAnswerID': data.specificAnswerID 
+        }).then ( async () => {
+          const newDoc = new Collections.answers({
             answerID: data.answerID, 
             answer: {
               answerType: data.answerType,
               answerImage: {image: answerImageFile},
               answerSubscripts: answerSubscripts_,
-              specificAnswerID: data.specificAnswerID,    
-              answerValues: answerValues,
+              specificAnswerID: data.specificAnswerID,
+              answerValues: answerValues,    
             },
-          }, { 
-            new: true, 
-            overwrite: true
-          }).then(()=>console.log("updated"));
-        } else { // no document or many exist > delete and create new doc
-          await Collections.answers.deleteMany({ 
-            answerID: data.answerID, 
-            specificAnswerId: data.specificAnswerID
-          }).then ( async () => {
-            const newDoc = new Collections.answers({
-              answerID: data.answerID, 
-              answer: {
-                answerType: data.answerType,
-                answerImage: {image: answerImageFile},
-                answerSubscripts: answerSubscripts_,
-                specificAnswerID: data.specificAnswerID,
-                answerValues: answerValues,    
-              },
-            })
-            await newDoc.save().then(() => console.log("delete and saved"))
           })
-        }
-      })    
-    })      
-  })
+          await newDoc.save().then(()=>console.log("Answer : delete and saved"))
+        })
+      }
+    })    
+  })      
 };

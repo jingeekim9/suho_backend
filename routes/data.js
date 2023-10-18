@@ -81,7 +81,7 @@ router.get('/saveQuestion', async (req, res) => {
 
 const handleUnexpectedObj = (data) => {
   let returnData = []
-  if (data !==undefined) for (const [key, value] of Object.entries(data)) returnData.push(value)
+  if (data !== undefined) for (const [key, value] of Object.entries(data)) returnData.push(value)
 
   return returnData
 }
