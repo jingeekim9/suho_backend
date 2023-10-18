@@ -81,7 +81,7 @@ router.get('/saveQuestion', async (req, res) => {
 
 const handleUnexpectedObj = (data) => {
   let returnData = []
-  for (const [key, value] of Object.entries(data)) returnData.push(value)
+  for (const [key, value] of Object.entries(data)) value && returnData.push(value)
 
   return returnData
 }
