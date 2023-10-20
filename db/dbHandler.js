@@ -74,6 +74,16 @@ module.exports.getAnswers = async (infos) => {
   return result;
 };
 
+module.exports.saveQuestion = async (infos) => {
+  console.log("save question called in background");
+  var myquery = { 
+    "questionId": infos.questionId,
+  };
+  var newvalues = { $set: {bookmarked: infos.bookmarked, wrong: infos.wrong} };
+
+  Collections.questions.updateOne(myquery, newvalues).then(() => {console.log("SAVE QUESTION WORKING")});
+};
+
 module.exports.uploadFilesQuestion = () => {
   CSV.readCSV(__dirname + '/data/dataInfo/Questions.csv').then((csv_data) => {
     // console.log("data: ", csv_data);
