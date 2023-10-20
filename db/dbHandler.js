@@ -63,6 +63,31 @@ module.exports.getQuestions = async (infos) => {
   return result
 };
 
+module.exports.getMultipleAnswers = async (infos) => {
+  /*
+    infos: {answerId, specificAnswerId}
+  */
+
+  const returnList = [];
+  for(let i = 0; i < infos.length; i++){
+    let result = "";
+    infos[i].specificAnswerId == undefined? 
+      result = await Collections.answers.findOne({
+        'answerID' : { $in: infos[i].answerId },
+      }) :
+
+      result = await Collections.answers.findOne({
+        'answerID' : { $in: infos[i].answerId },
+        'answer.specificAnswerID': { $in: infos[i].specificAnswerId },
+      })
+
+      returnList.push(result);
+  }
+  //?
+  console.log("getMultipleAnswers found", returnList);
+  return returnList;
+};
+
 module.exports.getAnswers = async (infos) => {
   const result = await Collections.answers.find({
       'answerID' : { $in: infos.answerID },
