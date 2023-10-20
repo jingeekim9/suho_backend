@@ -44,6 +44,7 @@ module.exports.getQuestionInfo = async () => {
 }
 
 module.exports.getQuestions = async (infos) => {
+  console.log("getQuestions called in background");
   console.log('getQuestions, infos:',infos)
   // infos = { questionType: String, difficulty: Array, chapter, paper: Array, timezone: Array, }
   const returned = await Collections.questions.find({
@@ -68,6 +69,7 @@ module.exports.getMultipleAnswers = async (infos) => {
   /*
     infos: {answerId, specificAnswerId}
   */
+  console.log("getMultipleAnswers called in background");
 
   const returnList = [];
   for(let i = 0; i < infos.length; i++){
@@ -90,6 +92,7 @@ module.exports.getMultipleAnswers = async (infos) => {
 };
 
 module.exports.getAnswers = async (infos) => {
+  console.log("getAnswers called in background");
   const result = await Collections.answers.find({
       'answerID' : { $in: infos.answerID },
       'answer.specificAnswerID': { $in: infos.specificAnswerID },
@@ -101,7 +104,7 @@ module.exports.getAnswers = async (infos) => {
 };
 
 module.exports.saveQuestion = async (infos) => {
-  console.log("save question called in background");
+  console.log("saveQuestion called in background");
   var myquery = { 
     "questionId": infos.questionId,
   };
