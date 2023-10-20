@@ -6,6 +6,7 @@ const fs = require("fs");
 const fileConvert = require("./data/utils/fileConvert")
 const CSV = require("./data/utils/handleCSV")
 const db = require('./db.js'); // db 불러오기
+const { disconnect } = require("process");
 
 const DataFolder = "./data/";
 
