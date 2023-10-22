@@ -93,12 +93,19 @@ module.exports.getMultipleAnswers = async (infos) => {
 
 module.exports.getAnswers = async (infos) => {
   console.log("getAnswers called in background");
-  const result = await Collections.answers.find({
-      'answerID' : { $in: infos.answerID },
-      'answer.specificAnswerID': { $in: infos.specificAnswerID },
-  })
-
-  console.log(result);
+  let result = [];
+  if(infos.specificAnswerId == undefined){
+    result = await Collections.answers.find({
+      'answerID' : { $in: infos.answerId },
+    })
+  }
+  else{
+    result = await Collections.answers.find({
+      'answerID' : { $in: infos.answerId },
+      'answer.specificAnswerID': { $in: infos.specificAnswerId },
+    })
+  }
+  console.log("getAnswers result: ", result);
   
   return result;
 };
