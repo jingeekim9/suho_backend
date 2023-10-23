@@ -1,6 +1,6 @@
 const User = require("../db/model/User");
-const ErrorResponse = require('../utils/errorResponse');
-const sendEmail = require('../utils/sendEmail');
+const ErrorResponse = require('./utils/errorResponse');
+const sendEmail = require('./utils/sendEmail');
 const crypto = require('crypto');
 
 exports.register = async (req, res, next) => {
