@@ -7,7 +7,7 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const app = express();
 var cors = require('cors')
-const db = require('./db/db'); // load db
+const db = require('./features/db/db'); // load db
 const errorHandler = require("./features/auth/middleware/error");
 
 const dataRouter = require('./routes/data');
