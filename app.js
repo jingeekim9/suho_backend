@@ -1,13 +1,15 @@
+require('dotenv').config({ path: './.env' });
+
 const createError = require('http-errors');
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-
 const app = express();
 var cors = require('cors')
+const db = require('./db/db'); // load db
+const errorHandler = require("./features/auth/middleware/error");
 
-const db = require('./db/db.js'); // load db
 const dataRouter = require('./routes/data');
 
 
@@ -25,7 +27,9 @@ app.use(cors()) // cool now everything is handled!
 db(); // run db
 
 app.use('/api/Data', dataRouter);
-
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/private', require('./routes/private'));
+app.use(errorHandler)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
