@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { forgotPassword, resetPassword, 
-        register, login, } = require('../auth/auth');
+const { register, login, forgotPassword, resetPassword, } = require('../features/auth/auth');
 
 router.post('/register', register);
 router.post('/login', login);
