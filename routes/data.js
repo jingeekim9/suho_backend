@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
-const { uploadFilesQuestion, uploadFilesAnswer, getAnswers, getQuestions, saveQuestion, getMultipleAnswers } = require('../db/dbHandler');
+const { uploadFilesQuestion, uploadFilesAnswer, getAnswers, getQuestions, saveQuestion, getMultipleAnswers } = require('../features/db/dbHandler');
 
 // xxx.xxx.xxx.xxx:PORT/api/Data/<url>
 router.get('/', async (req, res) => {
