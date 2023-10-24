@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
 function connect() {
-  // mongoose.connect(process.env.MONGO_URI, {
-  mongoose.connect("mongodb://localhost:27017/Test1?retryWrites=true", {
+  mongoose.connect(process.env.MONGO_URI, {
+  // mongoose.connect("mongodb://localhost:27017/Test1?retryWrites=true", {
     useNewUrlParser: true,
     // useCreateIndex: true,
     useUnifiedTopology: true,

@@ -13,7 +13,6 @@ function filterArrayByChapter(docs, array){
           if(element.chapter.includes(cpt)){returnArray.push(element);}
       });
   });
-
   return returnArray;
 }
 
