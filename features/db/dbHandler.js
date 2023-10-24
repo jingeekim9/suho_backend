@@ -1,19 +1,12 @@
 const question = require("./model/Question");
 const answer = require("./model/Answer");
-const questionInfoSchema = question.questionInfoSchema;
-const ImageSchema = question.imageSchema;
 const fs = require("fs");
 const fileConvert = require("./data/utils/fileConvert")
 const CSV = require("./data/utils/handleCSV")
-const db = require('./db.js'); // db 불러오기
-const { disconnect } = require("process");
-
-const DataFolder = "./data/";
 
 const Collections = { questions: question, answers: answer, };
 
-
-function filterByChapter(docs, array){
+function filterArrayByChapter(docs, array){
   let returnArray = [];
    array.forEach((cpt) => {
       docs.forEach((element) => {
@@ -24,12 +17,14 @@ function filterByChapter(docs, array){
   return returnArray;
 }
 
-function filterByBookmark(docs, bookmarked) {
+function filterResultByHandler(docs, handler) {
   let returnArray = [];
   docs.forEach((element) => {
-    if(element.bookmarked === bookmarked) returnArray.push(element)
+    console.log(element.result.length)
+    if (element.result.length !== 0 && element.result.some(handler)) {
+        returnArray.push(element)
+    }
   })
-
   return returnArray
 }
 
@@ -38,47 +33,47 @@ function getMultipleRandom(arr, num) {
   return shuffeld.slice(0,num)
 }
 
-
-module.exports.getQuestionInfo = async () => {
-// TODO:: questionType
-}
-
 module.exports.getQuestions = async (infos) => {
-  console.log("getQuestions called in background");
-  console.log('getQuestions, infos:',infos)
   // infos = { questionType: String, difficulty: Array, chapter, paper: Array, timezone: Array, }
-  const returned = await Collections.questions.find({
-      'difficulty': { $in: infos.difficulty },
-      'timezone' : {$in: infos.timezone },
-      'paper' : {$in: infos.paper},
-      'wrong' : {$gte: infos.wrong},
-  }).then((docs) => {
-    let result = filterByChapter(docs, infos.chapter)
-    if (infos.bookmarked !== undefined) result = filterByBookmark(result, infos.bookmarked)
-    return result
-  });
+  console.log('getQuestions, infos: ', infos)
+
+  let query = {
+    'difficulty': { $in: infos.difficulty },
+    'timezone' : {$in: infos.timezone },
+    'paper' : {$in: infos.paper},
+  }
+
+  const returned = await Collections.questions.find(query)
+  .then((docs) => filterArrayByChapter(docs, infos.chapter))
+  .then((docs) => {
+    if (infos.wrong || infos.bookmarked) {
+      let filteredDocs = filterResultByHandler(docs, e => e.userEmail === infos.userEmail)
+      infos.wrong && filterResultByHandler(filteredDocs, e => e.wrong >= infos.wrong)
+      infos.bookmarked && filterResultByHandler(filteredDocs, e => e.bookmarked === infos.bookmarked)
+      return filteredDocs
+    } else {
+      return docs
+    }
+  })
 
   let result = isNaN(infos.questionNumber) ? 
-                returned : 
-                getMultipleRandom(returned, infos.questionNumber)
-  console.log('getQuestions, ',result)
+                returned : getMultipleRandom(returned, infos.questionNumber)
+  console.log('getQuestions, result:', result)
+
   return result
 };
 
 module.exports.getMultipleAnswers = async (infos) => {
-  /*
-    infos: {answerId, specificAnswerId}
-  */
-  console.log("getMultipleAnswers called in background");
+  /* infos: {answerId, specificAnswerId} */
+  console.log("getMultipleAnswers, infos: ", infos);
 
   const returnList = [];
   for(let i = 0; i < infos.length; i++){
     let result = "";
-    infos[i].specificAnswerId == undefined? 
+    infos[i].specificAnswerId == undefined ? 
       result = await Collections.answers.findOne({
         'answerID' : { $in: infos[i].answerId },
       }) :
-
       result = await Collections.answers.findOne({
         'answerID' : { $in: infos[i].answerId },
         'answer.specificAnswerID': { $in: infos[i].specificAnswerId },
@@ -86,20 +81,18 @@ module.exports.getMultipleAnswers = async (infos) => {
 
       returnList.push(result);
   }
-  //?
-  console.log("getMultipleAnswers found", returnList);
+  console.log("getMultipleAnswers result", returnList);
   return returnList;
 };
 
 module.exports.getAnswers = async (infos) => {
-  console.log("getAnswers called in background");
+  console.log("getAnswers called, infos: ", infos);
   let result = [];
   if(infos.specificAnswerId == undefined){
     result = await Collections.answers.find({
       'answerID' : { $in: infos.answerId },
     })
-  }
-  else{
+  } else {
     result = await Collections.answers.find({
       'answerID' : { $in: infos.answerId },
       'answer.specificAnswerID': { $in: infos.specificAnswerId },
@@ -111,13 +104,51 @@ module.exports.getAnswers = async (infos) => {
 };
 
 module.exports.saveQuestion = async (infos) => {
-  console.log("saveQuestion called in background");
-  var myquery = { 
+  console.log("saveQuestion, infos: ", infos);
+  let query = { 
     "questionId": infos.questionId,
-  };
-  var newvalues = { $set: {bookmarked: infos.bookmarked, wrong: infos.wrong} };
+    'question.subQuestion': { 
+      $elemMatch: { specificQuestionId: infos.specificQuestionId }
+    },
+    'result': { 
+      $elemMatch: { userEmail: infos.userEmail }
+    }
+  }
+  let value = {
+    'userEmail': infos.userEmail,
+    'bookmarked': infos.bookmarked,
+    'wrong': infos.wrong
+  }
 
-  Collections.questions.updateOne(myquery, newvalues).then(() => {console.log("SAVE QUESTION WORKING")});
+  await Collections.questions.countDocuments(query)
+  .then( async (count) => {
+    if (count === 1) {
+      let doc = await Collections.questions.findOne(query)
+      let found = doc.result.findIndex(e => e === infos.userEmail)
+      found !== -1 ? doc.result.push(value) : doc.result[found] = value
+      
+      await Collections.questions.findOneAndUpdate(query, doc)
+      .then(() => console.log("saveQuestion done, bookmark:", 
+                                infos.bookmarked, ", times of wrong:", infos.wrong))
+    } else if (count === 0) {
+      await Collections.questions.findOne({
+        "questionId": infos.questionId,
+        'question.subQuestion': { 
+          $elemMatch: { specificQuestionId: infos.specificQuestionId }
+      }}).then(async (doc) => {
+        doc.result = new Array()
+        doc.result.push(value)
+        console.log("to be saved:", doc)
+        await Collections.questions.findOneAndUpdate({
+          "questionId": infos.questionId,
+          'question.subQuestion': { 
+            $elemMatch: { specificQuestionId: infos.specificQuestionId }
+        }}, doc)
+      })
+    } else {
+      console.log("something wrong, no data or many data in collection.")
+    }
+  })
 };
 
 module.exports.uploadFilesQuestion = () => {
@@ -173,7 +204,7 @@ module.exports.uploadFilesQuestion = () => {
               unit: data.unit,
               marks: data.marks,
               instruction: data.instruction,
-              answerSubscripts: answerSubscripts_
+              answerSubscripts: answerSubscripts_,
             }],
           },
           chapter: chapter_,
@@ -182,8 +213,7 @@ module.exports.uploadFilesQuestion = () => {
           timezone: data.timezone,
           season: data.season ,// W or S,
           year: data.year,
-          wrong: 0,
-          bookmarked: "false",
+          result: []
         }, { 
           new: true, 
           overwrite: true
@@ -214,8 +244,7 @@ module.exports.uploadFilesQuestion = () => {
             timezone: data.timezone,
             season: data.season ,// W or S,
             year: data.year,
-            wrong: 0,
-            bookmarked: "false",
+            result: []
           })
           await newDoc.save().then(()=>console.log("Question : delete and saved"))
         })
