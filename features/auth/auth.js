@@ -43,40 +43,40 @@ exports.login = async (req, res, next) => {
   }
 };
 
-// exports.forgotPassword = async (req, res, next) => {
-//   const { email } = req.body;
-//   console.log("forgetPassword called, email:", email)
+exports.forgotPassword = async (req, res, next) => {
+  const { email } = req.body;
+  console.log("forgetPassword called, email:", email)
 
-//   try {
-//     const user = await User.findOne({ email });
-//     if (!user) {
-//       next(new ErrorResponse('Email cannot be sent', 404));
-//     }
-//     const resetToken = user.getResetPasswordToken();
-//     await user.save();
-//     const resetUrl = `https://suhoihn-frontend-d0d1edd8399f.herokuapp.com/passwordreset/${resetToken}`;
-//     const resetUrl = `http://localhost:3000/passwordreset/${resetToken}`;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      next(new ErrorResponse('Email cannot be sent', 404));
+    }
+    const resetToken = user.getResetPasswordToken();
+    await user.save();
+    const resetUrl = `https://suhoihn-frontend-d0d1edd8399f.herokuapp.com/passwordreset/${resetToken}`;
+    // const resetUrl = `http://localhost:3000/passwordreset/${resetToken}`;
 
-//     const message = `<h1>You have requested a password reset</h1><p>Please go to this link to reset your password</p><a href=${resetUrl} clicktracking=off>${resetUrl}</a>`;
-//     try {
-//       sendEmail({
-//         to: user.email,
-//         subject: 'Password Reset Request',
-//         text: message,
-//       });
-//       res.status(200).json({ success: true, data: 'Email Sent' });
-//     } catch (error) {
-//       console.log("error occured while SendEmail, error:", error)
-//       user.resetPasswordToken = undefined;
-//       user.resetPasswordExpire = undefined;
-//       await user.save();
-//       next(new ErrorResponse('Email cannot be sent', 404));
-//     }
-//   } catch (error) {
-//     console.log("error occured", error)
-//     next(error);
-//   }
-// };
+    const message = `<h1>You have requested a password reset</h1><p>Please go to this link to reset your password</p><a href=${resetUrl} clicktracking=off>${resetUrl}</a>`;
+    try {
+      sendEmail({
+        to: user.email,
+        subject: 'Password Reset Request',
+        text: message,
+      });
+      res.status(200).json({ success: true, data: 'Email Sent' });
+    } catch (error) {
+      console.log("error occured while SendEmail, error:", error)
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save();
+      next(new ErrorResponse('Email cannot be sent', 404));
+    }
+  } catch (error) {
+    console.log("error occured", error)
+    next(error);
+  }
+};
 
 exports.resetPassword = async (req, res, next) => {
   const resetPasswordToken = crypto
