@@ -49,8 +49,11 @@ module.exports.getQuestions = async (infos) => {
       let filteredDocs = filterResultByHandler(docs, e => e.userEmail === infos.userEmail)
       infos.wrong && filterResultByHandler(filteredDocs, e => e.wrong >= infos.wrong)
       infos.bookmarked && filterResultByHandler(filteredDocs, e => e.bookmarked === infos.bookmarked)
-      console.log('!!!!!!!!!!')
-      console.log(filteredDocs)
+      filteredDocs = filteredDocs.filter((value, index, self) => 
+        index === self.findIndex((t) => (
+          t.questionId === value.questionId
+        ))
+      )
       return filteredDocs
     } else {
       return docs
@@ -60,7 +63,11 @@ module.exports.getQuestions = async (infos) => {
   let result = isNaN(infos.questionNumber) ? 
                 returned : getMultipleRandom(returned, infos.questionNumber)
   console.log('getQuestions, result:', result)
-
+  result = result.filter((value, index, self) => 
+    index === self.findIndex((t) => (
+      t.questionId === value.questionId
+    ))
+  )
   return result
 };
 
