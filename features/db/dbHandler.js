@@ -49,6 +49,8 @@ module.exports.getQuestions = async (infos) => {
       let filteredDocs = filterResultByHandler(docs, e => e.userEmail === infos.userEmail)
       infos.wrong && filterResultByHandler(filteredDocs, e => e.wrong >= infos.wrong)
       infos.bookmarked && filterResultByHandler(filteredDocs, e => e.bookmarked === infos.bookmarked)
+      console.log('!!!!!!!!!!')
+      console.log(filteredDocs)
       return filteredDocs
     } else {
       return docs
