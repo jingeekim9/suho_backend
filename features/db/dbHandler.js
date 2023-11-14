@@ -56,9 +56,16 @@ module.exports.getBookmarks = async(infos) => {
   console.log('getBookmark, infos: ', infos)
   try {
     let doc = await Collections.bookmarks.find(infos)
-    return doc
+    var questionArray = []
+    for(var i = 0; i < doc.length; i++)
+    {
+      let question = await Collections.questions.find({questionId: doc[i].questionId});
+      questionArray.push(question)
+    }
+    return questionArray
   }
   catch (error) {
+    console.log(error)
     return false
   }
 }
