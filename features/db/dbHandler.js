@@ -1,10 +1,11 @@
 const question = require("./model/Question");
 const answer = require("./model/Answer");
+const bookmark = require("./model/Bookmark");
 const fs = require("fs");
 const fileConvert = require("./data/utils/fileConvert")
 const CSV = require("./data/utils/handleCSV")
 
-const Collections = { questions: question, answers: answer, };
+const Collections = { questions: question, answers: answer, bookmarks: bookmark };
 
 function filterArrayByChapter(docs, array){
   let returnArray = [];
@@ -32,6 +33,36 @@ function getMultipleRandom(arr, num) {
   return shuffeld.slice(0,num)
 }
 
+module.exports.saveBookmark = async(infos) => {
+  console.log('getBookmark, infos: ', infos)
+  try {
+    let doc = await Collections.bookmarks.findOne(infos)
+    if(doc)
+    {
+      console.log(doc)
+    }
+    else
+    {
+      await Collections.bookmarks.create(infos)
+    }
+    return true
+  }
+  catch (error) {
+    return false
+  }
+}
+
+module.exports.getBookmarks = async(infos) => {
+  console.log('getBookmark, infos: ', infos)
+  try {
+    let doc = await Collections.bookmarks.find(infos)
+    return doc
+  }
+  catch (error) {
+    return false
+  }
+}
+
 module.exports.getQuestions = async (infos) => {
   // infos = { questionType: String, difficulty: Array, chapter, paper: Array, timezone: Array, }
   console.log('getQuestions, infos: ', infos)
@@ -45,6 +76,7 @@ module.exports.getQuestions = async (infos) => {
   const returned = await Collections.questions.find(query)
   .then((docs) => filterArrayByChapter(docs, infos.chapter))
   .then((docs) => {
+    console.log(docs)
     if (infos.wrong || infos.bookmarked) {
       let filteredDocs = filterResultByHandler(docs, e => e.userEmail === infos.userEmail)
       infos.wrong && filterResultByHandler(filteredDocs, e => e.wrong >= infos.wrong)

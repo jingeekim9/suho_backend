@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
-const { uploadFilesQuestion, uploadFilesAnswer, getAnswers, getQuestions, saveQuestion, getMultipleAnswers } = require('../features/db/dbHandler');
+const { uploadFilesQuestion, uploadFilesAnswer, getAnswers, getQuestions, saveQuestion, getMultipleAnswers, saveBookmark, getBookmarks } = require('../features/db/dbHandler');
 
 // xxx.xxx.xxx.xxx:PORT/api/Data/<url>
 router.get('/', async (req, res) => {
@@ -33,13 +33,44 @@ router.get('/UploadAnswer', async (req, res) => {
   }
 });
 
+router.get('/getBookmarks', async (req, res) => {
+  console.log("save bookmark", req.query)
+  try {
+    var bookmarks = await getBookmarks(req.query)
+    res.status(200).json(bookmarks)
+  } catch (error) {
+    console.log(error)
+    res.status(400).json({
+      msg: error.message
+    })
+  }
+})
+
+router.get('/saveBookmark', async (req, res) => {
+  console.log("save bookmark", req.query)
+  try {
+    var success = await saveBookmark(req.query)
+    if(success)
+    {
+      res.status(200).json("upload Answer complete")
+    }
+    else {
+      res.status(404).json("problem")
+    }
+  } catch (error) {
+    console.log(error)
+    res.status(400).json({
+      msg: error.message
+    })
+  }
+})
 
 // QuestionInfos = { questionType: ['multiAns'], difficulty: ['1','3'], paper: ['1'], 
 //                   timezone: [1, 2], chapter: [2, 7], questionNumber: 5 }
 router.get('/getQuestions', async (req, res) => {
+  console.log("working")
   req.query.infos.timezone = req.query.infos.timezone.map((e) => +e)
   req.query.infos.questionNumber = parseInt(req.query.infos.questionNumber)
-
   try {
     const questions = await getQuestions(req.query.infos);
     //console.log("questions in data.js: ", questions);
