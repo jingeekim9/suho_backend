@@ -55,10 +55,11 @@ module.exports.saveBookmark = async(infos) => {
 module.exports.deleteBookmark = async(infos) => {
   console.log('getBookmark, infos: ', infos)
   try {
-    await Collections.bookmarks.remove(infos)
+    await Collections.bookmarks.deleteOne(infos)
     return true
   }
   catch (error) {
+    console.log(error)
     return false
   }
 }
