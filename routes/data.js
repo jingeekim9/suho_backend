@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
-const { uploadFilesQuestion, uploadFilesAnswer, getAnswers, getQuestions, saveQuestion, getMultipleAnswers, saveBookmark, getBookmarks } = require('../features/db/dbHandler');
+const { uploadFilesQuestion, uploadFilesAnswer, getAnswers, getQuestions, saveQuestion, getMultipleAnswers, saveBookmark, getBookmarks, deleteBookmark } = require('../features/db/dbHandler');
 
 // xxx.xxx.xxx.xxx:PORT/api/Data/<url>
 router.get('/', async (req, res) => {
@@ -53,6 +53,25 @@ router.get('/saveBookmark', async (req, res) => {
     if(success)
     {
       res.status(200).json("upload Answer complete")
+    }
+    else {
+      res.status(404).json("problem")
+    }
+  } catch (error) {
+    console.log(error)
+    res.status(400).json({
+      msg: error.message
+    })
+  }
+})
+
+router.get('/deleteBookmark', async (req, res) => {
+  console.log("delete bookmark", req.query)
+  try {
+    var success = await deleteBookmark(req.query)
+    if(success)
+    {
+      res.status(200).json("delete bookmark complete")
     }
     else {
       res.status(404).json("problem")

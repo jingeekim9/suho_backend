@@ -52,6 +52,17 @@ module.exports.saveBookmark = async(infos) => {
   }
 }
 
+module.exports.deleteBookmark = async(infos) => {
+  console.log('getBookmark, infos: ', infos)
+  try {
+    await Collections.bookmarks.remove(infos)
+    return true
+  }
+  catch (error) {
+    return false
+  }
+}
+
 module.exports.getBookmarks = async(infos) => {
   console.log('getBookmark, infos: ', infos)
   try {
